@@ -4,6 +4,8 @@
 name: thallinger2 Mac build
 
 on:
+  push:
+    branches: [thallinger2]
   workflow_dispatch:
 
 permissions:
