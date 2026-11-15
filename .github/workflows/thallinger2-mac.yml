@@ -1,0 +1,47 @@
+# Local addition (fork only): builds the game program with the name thallinger2 built in
+# (HORIZON_OFFLINE_NAME, see crates/horizon-client/src/game/launch_options.rs "Local change")
+# for both kinds of Mac. The artifact zip goes straight into the Horizon launcher (Import).
+name: thallinger2 Mac build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: mac-apple-silicon
+            target: aarch64-apple-darwin
+          - name: mac-intel
+            target: x86_64-apple-darwin
+    runs-on: macos-latest
+    timeout-minutes: 90
+    env:
+      HORIZON_NIGHTLY: 2026-11-13 9f42064
+      HORIZON_OFFLINE_NAME: thallinger2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable, 2026-11
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - name: Build the game
+        run: cargo build --release --locked --target ${{ matrix.target }} -p horizon-official --bin horizon-official
+      - name: Under the game's name, check the name is in it
+        run: |
+          mkdir out
+          cp target/${{ matrix.target }}/release/horizon-official out/horizon-client
+          file out/horizon-client
+          grep -c -a -e thallinger2 -e thalling out/horizon-client
+      - uses: actions/upload-artifact@v7
+        with:
+          name: horizon-thallinger2-${{ matrix.name }}
+          path: out/horizon-client
+          if-no-files-found: error

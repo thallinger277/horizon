@@ -132,6 +132,21 @@ impl Options {
                 .transpose()
         };
         match session {
+            // Local change: a name given on purpose (`--name`, e.g. the launcher's extra game
+            // arguments, or HORIZON_PLAYER_NAME) that is not the account's plays offline under
+            // that name, for offline-mode servers. The account's session is left unused.
+            Ok(Some(session))
+                if o
+                    .player_name
+                    .as_ref()
+                    .is_some_and(|name| *name != session.name) =>
+            {
+                eprintln!(
+                    "Horizon: playing offline as {} (--name), not as the signed-in {}",
+                    o.player_name.as_deref().unwrap_or_default(),
+                    session.name
+                );
+            }
             Ok(Some(session)) => {
                 o.player_name = Some(session.name.clone());
                 horizon_client::auth::set_current(session);
@@ -214,8 +229,11 @@ impl Options {
                 .ok()
                 .and_then(|v| v.parse().ok()),
             server: None,
+            // Local change: a build made with HORIZON_OFFLINE_NAME set always plays as that
+            // name (offline, see the session match in `read`), unless `--name` says otherwise.
             player_name: std::env::var("HORIZON_PLAYER_NAME")
                 .ok()
+                .or_else(|| option_env!("HORIZON_OFFLINE_NAME").map(str::to_owned))
                 .filter(|n| !n.is_empty()),
             dedicated: None,
             transfers: None,
